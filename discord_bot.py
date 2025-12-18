@@ -14,6 +14,7 @@ import config
 from memory import MemoryManager
 from inner_thoughts import InnerThoughtsEngine
 from research_logger import ResearchLogger
+from information_gatherer import InformationGatherer
 
 
 class ProactiveAIBot(commands.Bot):
@@ -40,6 +41,7 @@ class ProactiveAIBot(commands.Bot):
         
         # エンジン
         self.engine = InnerThoughtsEngine()
+        self.info_gatherer = InformationGatherer()
         
         # ユーザーごとの記憶管理
         self.memories: dict[str, MemoryManager] = {}
@@ -53,6 +55,9 @@ class ProactiveAIBot(commands.Bot):
         
         # 処理中フラグ（二重応答防止）
         self.processing: set[str] = set()
+        
+        # 情報収集の最終検索時刻
+        self.last_info_search: dict[str, datetime] = {}
     
     # =========================================================================
     # イベントハンドラ
@@ -119,6 +124,10 @@ class ProactiveAIBot(commands.Bot):
                 # 応答生成
                 response = await self.engine.generate_reactive_response(memory)
             
+            # 空のレスポンスチェック
+            if not response:
+                response = "ごめん、ちょっと調子悪いみたい..."
+            
             # 応答を記録
             memory.add_message("assistant", response)
             self.logger.log_ai_response(user_id, response, is_proactive=False)
@@ -168,6 +177,74 @@ class ProactiveAIBot(commands.Bot):
     @proactive_cycle.before_loop
     async def before_proactive_cycle(self):
         """Proactiveサイクル開始前にBotの準備完了を待つ"""
+        await self.wait_until_ready()
+        
+        
+        # =========================================================================
+    # 情報収集サイクル
+    # =========================================================================
+    
+    @tasks.loop(minutes=30)
+    async def information_gathering_cycle(self):
+        """
+        定期的に実行される情報収集サイクル
+        各ユーザーの興味に基づいて情報を探し、共有する
+        """
+        if not config.BRAVE_SEARCH_API_KEY:
+            return
+        
+        now = datetime.now()
+        
+        for user_id, memory in list(self.memories.items()):
+            try:
+                # 検索間隔チェック
+                last_search = self.last_info_search.get(user_id)
+                if last_search:
+                    elapsed = (now - last_search).total_seconds()
+                    if elapsed < config.SEARCH_INTERVAL:
+                        continue
+                
+                # 長期記憶がないユーザーはスキップ
+                if not memory.long_term:
+                    continue
+                
+                # 介入可能かチェック
+                if not memory.can_intervene():
+                    continue
+                
+                # 情報を探す
+                result = await self.info_gatherer.find_shareable_article(memory)
+                
+                if result:
+                    article, message = result
+                    
+                    # チャンネルを取得
+                    channel = await self._get_channel_for_user(user_id)
+                    if channel:
+                        # 記録
+                        memory.add_message("assistant", message)
+                        self.logger.log_ai_response(
+                            user_id, message, is_proactive=True,
+                            metadata={
+                                "trigger": "information_share",
+                                "article_title": article.title,
+                                "article_url": article.url,
+                                "relevance_score": article.relevance_score
+                            }
+                        )
+                        
+                        # 送信
+                        await channel.send(message)
+                
+                # 検索時刻を更新
+                self.last_info_search[user_id] = now
+                        
+            except Exception as e:
+                print(f"Information gathering error for {user_id}: {e}")
+    
+    @information_gathering_cycle.before_loop
+    async def before_information_gathering_cycle(self):
+        """情報収集サイクル開始前にBotの準備完了を待つ"""
         await self.wait_until_ready()
     
     # =========================================================================
@@ -293,8 +370,75 @@ class ProactiveAIBot(commands.Bot):
                 inline=False
             )
             
+            embed.add_field(
+                name="情報収集設定",
+                value=f"有効: {config.ENABLE_INFORMATION_GATHERING}\n"
+                      f"検索間隔: {config.SEARCH_INTERVAL}秒\n"
+                      f"共有閾値: {config.INFO_SHARE_MOTIVATION_THRESHOLD}\n"
+                      f"1日の最大共有: {config.MAX_DAILY_SHARES}回",
+                inline=False
+            )
+            
+            await ctx.send(embed=embed)
+            
+        @self.command(name="interests")
+        async def show_interests(ctx):
+            """推測された興味を表示"""
+            user_id = str(ctx.author.id)
+            memory = self._get_memory(user_id)
+            
+            async with ctx.typing():
+                interests = await self.info_gatherer.extract_interests(memory)
+            
+            if interests:
+                embed = discord.Embed(
+                    title="🔍 あなたの興味（推測）",
+                    description="\n".join([f"• {i}" for i in interests]),
+                    color=discord.Color.blue()
+                )
+                embed.set_footer(text="これらのキーワードで情報を探しています")
+            else:
+                embed = discord.Embed(
+                    title="🔍 あなたの興味",
+                    description="まだ興味を把握できていません。もっとお話ししましょう！",
+                    color=discord.Color.light_grey()
+                )
+            
             await ctx.send(embed=embed)
         
+        @self.command(name="search")
+        async def search_now(ctx):
+            """今すぐ情報を探して共有"""
+            if not config.BRAVE_SEARCH_API_KEY:
+                await ctx.send("🔍 検索機能が設定されていません（BRAVE_SEARCH_API_KEY が必要です）")
+                return
+            
+            user_id = str(ctx.author.id)
+            memory = self._get_memory(user_id)
+            
+            await ctx.send("🔍 あなたが興味ありそうな情報を探しています...")
+            
+            async with ctx.typing():
+                result = await self.info_gatherer.find_shareable_article(memory)
+            
+            if result:
+                article, message = result
+                
+                # 記録
+                memory.add_message("assistant", message)
+                self.logger.log_ai_response(
+                    user_id, message, is_proactive=True,
+                    metadata={
+                        "trigger": "manual_search",
+                        "article_title": article.title,
+                        "relevance_score": article.relevance_score
+                    }
+                )
+                
+                await ctx.send(message)
+            else:
+                await ctx.send("今回は特に良さそうな情報が見つからなかったかも...また後で探してみるね！")
+                
         @self.command(name="export")
         async def export_logs(ctx):
             """ログをエクスポート"""

@@ -84,7 +84,7 @@ class InnerThoughtsEngine:
         try:
             response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
-                max_tokens=500,
+                max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -132,7 +132,7 @@ class InnerThoughtsEngine:
         try:
             response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
-                max_tokens=500,
+                max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
             )
             
@@ -171,11 +171,12 @@ class InnerThoughtsEngine:
         try:
             response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
-                max_tokens=300,
+                max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else ""
             
         except Exception as e:
             print(f"Proactive response error: {e}")
@@ -196,11 +197,12 @@ class InnerThoughtsEngine:
         try:
             response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
-                max_tokens=300,
+                max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else ""
             
         except Exception as e:
             print(f"Silence break error: {e}")
@@ -225,15 +227,18 @@ class InnerThoughtsEngine:
             openai_messages = [{"role": "system", "content": system_prompt}] + messages
             response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
-                max_tokens=500,
+                max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=openai_messages
             )
             
-            return response.choices[0].message.content.strip()
+            content = response.choices[0].message.content
+            return content.strip() if content else "ごめん、ちょっと調子悪いみたい..."
             
         except Exception as e:
+            import traceback
             print(f"Reactive response error: {e}")
-            return "ごめん、ちょっと調子悪いみたい..."
+            traceback.print_exc()
+            return "ごめんね、ちょっと調子悪いみたい..."
     
     # =========================================================================
     # 記憶抽出
@@ -258,7 +263,7 @@ class InnerThoughtsEngine:
         try:
             response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
-                max_tokens=500,
+                max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
             )
             
