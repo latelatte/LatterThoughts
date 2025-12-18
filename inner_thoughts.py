@@ -136,8 +136,16 @@ class InnerThoughtsEngine:
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            result = self._extract_json(response.choices[0].message.content)
+            # デバッグ: レスポンス全体を確認
+            choice = response.choices[0]
+            raw_content = choice.message.content or ""
+            if not raw_content:
+                print(f"[DEBUG] Empty motivation response! finish_reason={choice.finish_reason}, tool_calls={choice.message.tool_calls}")
+            
+            result = self._extract_json(raw_content)
             if not result:
+                # デバッグ: 何が返ってきたか確認
+                print(f"[DEBUG] Motivation eval parse failed. Raw ({len(raw_content)} chars): {raw_content[:300]}...")
                 return {"overall_score": 0, "should_speak": False, "reasoning": "Parse error"}
             
             return result
@@ -232,6 +240,9 @@ class InnerThoughtsEngine:
             )
             
             content = response.choices[0].message.content
+            # デバッグ: contentが空の場合、response全体を確認
+            if not content:
+                print(f"[DEBUG] Empty content! Full response: {response.choices[0]}")
             return content.strip() if content else "ごめん、ちょっと調子悪いみたい..."
             
         except Exception as e:
@@ -267,9 +278,13 @@ class InnerThoughtsEngine:
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            result = self._extract_json(response.choices[0].message.content)
+            raw_content = response.choices[0].message.content or ""
+            print(f"[DEBUG] Memory extraction raw response: {raw_content[:500]}...")
+            
+            result = self._extract_json(raw_content)
             if isinstance(result, list):
                 return result
+            print(f"[DEBUG] Memory extraction: result is not list, got {type(result)}: {result}")
             return []
             
         except Exception as e:

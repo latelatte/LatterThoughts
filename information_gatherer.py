@@ -162,7 +162,12 @@ class InformationGatherer:
         
         articles = []
         
-        for interest in interests[:3]:  # 最大3つの興味で検索
+        import asyncio
+        for i, interest in enumerate(interests[:3]):  # 最大3つの興味で検索
+            if i > 0:
+                # 無料プランのレート制限対策: 2秒待機
+                await asyncio.sleep(2)
+            
             results = await self.search_brave(interest)
             
             for result in results:

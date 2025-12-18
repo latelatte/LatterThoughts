@@ -143,15 +143,18 @@ class ProactiveAIBot(commands.Bot):
                 async with message.channel.typing():
                     response = await self.engine.generate_reactive_response(memory)
                 
-                memory.add_message("assistant", response)
+                # フォールバックメッセージは履歴に保存しない（文脈が壊れるため）
+                is_fallback = "調子悪いみたい..." in response
+                if not is_fallback:
+                    memory.add_message("assistant", response)
                 self.logger.log_ai_response(user_id, response, is_proactive=False)
                 
                 await message.channel.send(response)
             
             # else: decision.action == "none" なら何もしない
             
-            # 定期的に記憶を抽出
-            if len(memory.short_term) % 5 == 0:
+            # 定期的に記憶を抽出（5ターンごと）
+            if len(memory.short_term) >= 5 and len(memory.short_term) % 5 <= 1:
                 await self._extract_and_save_memories(memory)
                 
         finally:
@@ -489,6 +492,22 @@ class ProactiveAIBot(commands.Bot):
             )
             
             await ctx.send(embed=embed)
+            
+        @self.command(name="clear")
+        async def clear_messages(ctx, limit: int = 50):
+            """BotのDMメッセージを削除"""
+            if not isinstance(ctx.channel, discord.DMChannel):
+                await ctx.send("DMでのみ使えます")
+                return
+            
+            deleted = 0
+            async for message in ctx.channel.history(limit=limit):
+                if message.author == self.user:
+                    await message.delete()
+                    deleted += 1
+                    await asyncio.sleep(0.5)  # レート制限対策
+            
+            await ctx.send(f"🧹 {deleted}件削除しました", delete_after=5)
     
     # =========================================================================
     # ヘルパー関数
@@ -511,7 +530,9 @@ class ProactiveAIBot(commands.Bot):
     async def _extract_and_save_memories(self, memory: MemoryManager):
         """記憶を抽出して保存"""
         try:
+            print(f"[DEBUG] Extracting memories...")
             new_memories = await self.engine.extract_memories(memory)
+            print(f"[DEBUG] Extracted {len(new_memories)} memories: {new_memories}")
             for mem in new_memories:
                 memory.add_long_term_memory(
                     key=mem.get("key", "その他"),
@@ -520,6 +541,8 @@ class ProactiveAIBot(commands.Bot):
                 )
         except Exception as e:
             print(f"Memory extraction error: {e}")
+            import traceback
+            traceback.print_exc()
 
 
 # =============================================================================
