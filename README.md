@@ -55,7 +55,7 @@ Inner Thoughtsフレームワークを実装した、自発的に話しかけて
 
 - Python 3.10+
 - Discord Bot Token
-- Anthropic API Key
+- OpenAI API Key
 
 ### 2. インストール
 

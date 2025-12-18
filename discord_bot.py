@@ -80,6 +80,11 @@ class ProactiveAIBot(commands.Bot):
         is_dm = isinstance(message.channel, discord.DMChannel)
         is_mentioned = self.user in message.mentions
         
+        if message.content.startswith(self.command_prefix):
+            if is_dm or is_mentioned or message.content.startswith(self.command_prefix):
+                await self.process_commands(message)
+            return
+        
         if not (is_dm or is_mentioned):
             return
         
@@ -359,9 +364,9 @@ def main():
         print("   .env ファイルに DISCORD_TOKEN=your_token を追加してください")
         return
     
-    if not config.ANTHROPIC_API_KEY:
-        print("❌ ANTHROPIC_API_KEY が設定されていません")
-        print("   .env ファイルに ANTHROPIC_API_KEY=your_key を追加してください")
+    if not config.OPENAI_API_KEY:
+        print("❌ OPENAI_API_KEY が設定されていません")
+        print("   .env ファイルに OPENAI_API_KEY=your_key を追加してください")
         return
     
     bot = ProactiveAIBot()

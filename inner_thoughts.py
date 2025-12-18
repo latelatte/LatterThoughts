@@ -6,7 +6,7 @@ Proactive AI Friend - Inner Thoughts Engine
 import json
 import re
 from typing import Optional
-from anthropic import Anthropic
+from openai import OpenAI
 
 import config
 import prompts
@@ -26,7 +26,7 @@ class InnerThoughtsEngine:
     """
     
     def __init__(self):
-        self.client = Anthropic(api_key=config.ANTHROPIC_API_KEY)
+        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
     
     # =========================================================================
     # ステージ1: Trigger（トリガー検出）
@@ -82,14 +82,14 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.messages.create(
+            response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_tokens=500,
                 messages=[{"role": "user", "content": prompt}]
             )
             
             # JSON抽出
-            result = self._extract_json(response.content[0].text)
+            result = self._extract_json(response.choices[0].message.content)
             if not result:
                 return None
             
@@ -130,13 +130,13 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.messages.create(
+            response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_tokens=500,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            result = self._extract_json(response.content[0].text)
+            result = self._extract_json(response.choices[0].message.content)
             if not result:
                 return {"overall_score": 0, "should_speak": False, "reasoning": "Parse error"}
             
@@ -169,13 +169,13 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.messages.create(
+            response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_tokens=300,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            return response.content[0].text.strip()
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
             print(f"Proactive response error: {e}")
@@ -194,13 +194,13 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.messages.create(
+            response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_tokens=300,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            return response.content[0].text.strip()
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
             print(f"Silence break error: {e}")
@@ -221,14 +221,15 @@ class InnerThoughtsEngine:
         messages = memory.get_conversation_history()
         
         try:
-            response = self.client.messages.create(
+            # OpenAI形式: systemはmessages内の最初の要素として渡す
+            openai_messages = [{"role": "system", "content": system_prompt}] + messages
+            response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_tokens=500,
-                system=system_prompt,
-                messages=messages
+                messages=openai_messages
             )
             
-            return response.content[0].text.strip()
+            return response.choices[0].message.content.strip()
             
         except Exception as e:
             print(f"Reactive response error: {e}")
@@ -255,13 +256,13 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.messages.create(
+            response = self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_tokens=500,
                 messages=[{"role": "user", "content": prompt}]
             )
             
-            result = self._extract_json(response.content[0].text)
+            result = self._extract_json(response.choices[0].message.content)
             if isinstance(result, list):
                 return result
             return []
