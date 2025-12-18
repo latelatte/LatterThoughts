@@ -15,6 +15,7 @@ from memory import MemoryManager
 from inner_thoughts import InnerThoughtsEngine
 from research_logger import ResearchLogger
 from information_gatherer import InformationGatherer
+from response_classifier import ResponseClassifier
 
 
 class ProactiveAIBot(commands.Bot):
@@ -42,6 +43,7 @@ class ProactiveAIBot(commands.Bot):
         # エンジン
         self.engine = InnerThoughtsEngine()
         self.info_gatherer = InformationGatherer()
+        self.classifier = ResponseClassifier()
         
         # ユーザーごとの記憶管理
         self.memories: dict[str, MemoryManager] = {}
@@ -119,21 +121,33 @@ class ProactiveAIBot(commands.Bot):
             memory.add_message("user", content)
             self.logger.log_user_message(user_id, content)
             
-            # 入力中インジケーター
-            async with message.channel.typing():
-                # 応答生成
-                response = await self.engine.generate_reactive_response(memory)
+            # 応答タイプを判定（リアクション or 返信 or 無視）
+            decision = await self.classifier.classify(
+                content,
+                memory.get_context_summary()
+            )
             
-            # 空のレスポンスチェック
-            if not response:
-                response = "ごめん、ちょっと調子悪いみたい..."
+            if decision.action == "react" and decision.reaction:
+                # リアクションで十分な場合 → 絵文字だけ付ける
+                await message.add_reaction(decision.reaction)
+                self.logger.log_ai_response(
+                    user_id, 
+                    f"[reaction: {decision.reaction}]", 
+                    is_proactive=False,
+                    metadata={"type": "reaction", "reason": decision.reason}
+                )
             
-            # 応答を記録
-            memory.add_message("assistant", response)
-            self.logger.log_ai_response(user_id, response, is_proactive=False)
+            elif decision.action == "reply":
+                # 返信が必要な場合 → 通常の応答生成
+                async with message.channel.typing():
+                    response = await self.engine.generate_reactive_response(memory)
+                
+                memory.add_message("assistant", response)
+                self.logger.log_ai_response(user_id, response, is_proactive=False)
+                
+                await message.channel.send(response)
             
-            # 送信
-            await message.channel.send(response)
+            # else: decision.action == "none" なら何もしない
             
             # 定期的に記憶を抽出
             if len(memory.short_term) % 5 == 0:

@@ -57,8 +57,9 @@ env/
 *.log
 logs/
 
-# Research data (optional - uncomment if you want to ignore)
+# Research data
 research_logs/
+memory_store/
 # *.csv
 
 # Temporary files

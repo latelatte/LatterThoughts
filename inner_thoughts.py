@@ -6,7 +6,7 @@ Proactive AI Friend - Inner Thoughts Engine
 import json
 import re
 from typing import Optional
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 import config
 import prompts
@@ -26,7 +26,7 @@ class InnerThoughtsEngine:
     """
     
     def __init__(self):
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.client = AsyncOpenAI(api_key=config.OPENAI_API_KEY)
     
     # =========================================================================
     # ステージ1: Trigger（トリガー検出）
@@ -82,7 +82,7 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
@@ -130,7 +130,7 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
@@ -169,7 +169,7 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
@@ -195,7 +195,7 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
@@ -225,7 +225,7 @@ class InnerThoughtsEngine:
         try:
             # OpenAI形式: systemはmessages内の最初の要素として渡す
             openai_messages = [{"role": "system", "content": system_prompt}] + messages
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=openai_messages
@@ -261,7 +261,7 @@ class InnerThoughtsEngine:
         )
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]

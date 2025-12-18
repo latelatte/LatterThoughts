@@ -8,7 +8,7 @@ import json
 from datetime import datetime, timedelta
 from typing import Optional
 from dataclasses import dataclass, asdict
-from openai import OpenAI
+from openai import AsyncOpenAI
 
 import config
 from memory import MemoryManager
@@ -43,7 +43,7 @@ class InformationGatherer:
     """
     
     def __init__(self):
-        self.client = OpenAI(api_key=config.OPENAI_API_KEY)
+        self.client = AsyncOpenAI(api_key=config.OPENAI_API_KEY)
         self.brave_api_key = config.BRAVE_SEARCH_API_KEY
         
         # ユーザーごとの記事キャッシュ（既に見つけた記事のURL）
@@ -84,7 +84,7 @@ class InformationGatherer:
 """
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
@@ -237,7 +237,7 @@ class InformationGatherer:
 """
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
@@ -297,7 +297,7 @@ URL: {article.url}
 """
         
         try:
-            response = self.client.chat.completions.create(
+            response = await self.client.chat.completions.create(
                 model=config.LLM_MODEL,
                 max_completion_tokens=config.MAX_COMPLETION_TOKENS,
                 messages=[{"role": "user", "content": prompt}]
