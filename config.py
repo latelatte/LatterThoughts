@@ -53,11 +53,11 @@ MOTIVATION_THRESHOLD = 3.5
 
 # 思考生成の頻度（秒）
 # ユーザーの発言後、この間隔で思考を生成・評価
-THOUGHT_GENERATION_INTERVAL = 30
+THOUGHT_GENERATION_INTERVAL = 300
 
 # 沈黙タイムアウト（秒）
 # この時間ユーザーが発言しなかったら、AIから話しかける
-SILENCE_TIMEOUT = 300  # 5分
+SILENCE_TIMEOUT = 600  # 10分
 
 # 連続介入の制限
 # AIが連続で発言できる最大回数（押しつけがましさ防止）
@@ -65,7 +65,7 @@ MAX_CONSECUTIVE_INTERVENTIONS = 2
 
 # 最小介入間隔（秒）
 # AIの発言後、次の自発的発言までの最小待機時間
-MIN_INTERVENTION_INTERVAL = 60
+MIN_INTERVENTION_INTERVAL = 300
 
 # =============================================================================
 # 記憶システム設定
@@ -112,7 +112,7 @@ AI_PERSONA = """
 
 ## 話し方
 - カジュアルだけど丁寧
-- 絵文字は控えめ（1メッセージに0-1個）
+- 絵文字はあまり使わない
 - 質問で終わるのは5回に1回くらい。残りは感想や自分の話で終わる
 
 

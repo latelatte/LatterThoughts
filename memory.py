@@ -116,7 +116,7 @@ class MemoryManager:
         return message
     
     def get_conversation_history(self, n: Optional[int] = None) -> list[dict]:
-        """会話履歴を取得（Claude API形式）"""
+        """会話履歴を取得"""
         messages = list(self.short_term)
         if n:
             messages = messages[-n:]

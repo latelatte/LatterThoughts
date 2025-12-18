@@ -73,9 +73,10 @@ class ProactiveAIBot(commands.Bot):
         print(f"📝 ログ保存先: {config.LOG_DIRECTORY}/")
         print("-" * 50)
         
-        # Proactiveサイクルを開始
+        # Proactiveサイクルを開始（既に動いていなければ）
         if config.EXPERIMENT_CONDITION == "proactive":
-            self.proactive_cycle.start()
+            if not self.proactive_cycle.is_running():
+                self.proactive_cycle.start()
     
     async def on_message(self, message: discord.Message):
         """メッセージ受信時"""
@@ -358,10 +359,20 @@ class ProactiveAIBot(commands.Bot):
                 color=discord.Color.purple()
             )
             
+            threshold = config.MOTIVATION_THRESHOLD
             for i, thought in enumerate(pending[:5], 1):
+                # 閾値を超えているかどうかでマークを付ける
+                passed = "✅" if thought.motivation_score >= threshold else "❌"
+                
+                # 思考内容と理由を表示
+                value = f"{thought.content[:100]}"
+                if thought.reasoning:
+                    value += f"\n📊 **理由**: {thought.reasoning[:100]}"
+                value += f"\n{passed} 閾値({threshold}) {'超え' if thought.motivation_score >= threshold else '未満'}"
+                
                 embed.add_field(
                     name=f"思考 {i} (スコア: {thought.motivation_score:.1f})",
-                    value=thought.content[:100],
+                    value=value,
                     inline=False
                 )
             
