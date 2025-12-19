@@ -1,4 +1,4 @@
-# 🤖 Proactive AI Friend
+# Lita (LLm with Innner Thoughts Action)
 
 Inner Thoughtsフレームワークを実装した、自発的に話しかけてくれるAI友達Discord Bot
 
@@ -113,6 +113,8 @@ python discord_bot.py
 | `!forget` | 記憶をリセット |
 | `!config` | 現在の設定を表示 |
 | `!export` | ログをエクスポート |
+| `!interests` | 記憶から抽出したユーザーの興味を表示 |
+| `!serach` | ユーザーの興味のありそうなサイトを検索する (デバッグ用) |
 
 ## 🔬 研究用設定
 
